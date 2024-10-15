@@ -2,6 +2,7 @@ package ru.troyanov.opdkukushiki.services;
 
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import ru.troyanov.Redis.Status;
 
 import java.time.Duration;
 
@@ -15,7 +16,7 @@ public class RedisService {
     }
 
     public void createNewTask(String taskId) {
-        redisTemplate.opsForHash().put(taskId, "status", "processing");
+        redisTemplate.opsForHash().put(taskId, "status", Status.PROCESSING.toString());
         redisTemplate.opsForHash().put(taskId, "result", "");
         redisTemplate.expire(taskId, Duration.ofHours(3));
     }

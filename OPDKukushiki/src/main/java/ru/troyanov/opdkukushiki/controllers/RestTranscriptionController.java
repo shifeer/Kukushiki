@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.troyanov.FileMessageDto;
+import ru.troyanov.Redis.Status;
 import ru.troyanov.opdkukushiki.services.AudioMessageService;
 import ru.troyanov.opdkukushiki.services.RedisService;
 
@@ -38,8 +39,7 @@ public class RestTranscriptionController {
 
         log.info("File is received {}", multipartFile.getOriginalFilename());
 
-        String taskId = sendFile(multipartFile);
-        System.out.println(taskId);
+        sendFile(multipartFile);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
@@ -51,23 +51,18 @@ public class RestTranscriptionController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
-        String redisTaskStatus = redisService.getTaskStatus(taskId);
-
-        if (redisTaskStatus == null) {
-            log.warn("Task id is empty");
-            return new ResponseEntity<>("Not task id" ,HttpStatus.BAD_REQUEST);
-        }
+        Status redisTaskStatus = Status.fromString(redisService.getTaskStatus(taskId));
 
         log.info("Task id is {}", taskId);
 
         switch (redisTaskStatus) {
-            case "processing":
+            case PROCESSING:
                 return new ResponseEntity<>("Task is processing", HttpStatus.NO_CONTENT);
-            case "error":
+            case ERROR:
                 return new ResponseEntity<>("Error service", HttpStatus.INTERNAL_SERVER_ERROR);
-            case "error_format":
+            case ERROR_FORMAT:
                 return new ResponseEntity<>("Error formatting", HttpStatus.BAD_REQUEST);
-            case "done":
+            case DONE:
                 String result = redisService.getTaskResult(taskId);
                 return new ResponseEntity<>(result, HttpStatus.OK);
             default:
@@ -75,7 +70,7 @@ public class RestTranscriptionController {
         }
     }
 
-    private String sendFile(MultipartFile multipartFile) throws IOException {
+    private void sendFile(MultipartFile multipartFile) throws IOException {
         String taskId = UUID.randomUUID().toString();
         String fileName = multipartFile.getOriginalFilename();
         byte[] audioBytes = multipartFile.getBytes();
@@ -85,6 +80,6 @@ public class RestTranscriptionController {
         audioMessageService.sendAudioMessage(fileMessageDto);
         redisService.createNewTask(taskId);
 
-        return taskId;
+        log.info("File is sent with task id {}", taskId);
     }
 }

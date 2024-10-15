@@ -28,8 +28,36 @@ public class ConvertAudioToWavService {
 
         if (IS_WAV_FORMAT) {
             return audioFile;
+        } else {
+            return convert(audioFile);
         }
+    }
 
+    private static void isWav16kHzMono(File audioFile) throws IOException {
+
+        try {
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+            AudioFormat audioFormat = audioInputStream.getFormat();
+
+            if (audioFormat.getSampleRate() == 16000 && audioFormat.getChannels() == 1 && audioFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED) {
+                IS_WAV_FORMAT = true;
+            }
+
+        } catch (UnsupportedAudioFileException e) {
+            IS_WAV_FORMAT = false;
+        }
+    }
+
+    private static boolean isAudioFormat(File file) {
+
+        String fileName = file.getName().toLowerCase();
+
+        return fileName.endsWith(".wav") ||
+                fileName.endsWith(".mp3") ||
+                fileName.endsWith(".ogg");
+    }
+
+    private static File convert(File audioFile) throws IOException, InterruptedException {
         File resFile = new File(audioFile.getAbsolutePath() + ".wav");
         ProcessBuilder processBuilder = new ProcessBuilder("ffmpeg", "-i", audioFile.getAbsolutePath(), "-ar", "16000", "-ac", "1", resFile.getAbsolutePath());
         processBuilder.redirectErrorStream(true);
@@ -57,29 +85,5 @@ public class ConvertAudioToWavService {
             }
             return null;
         }
-    }
-
-    private static void isWav16kHzMono(File audioFile) throws IOException {
-
-        try {
-            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
-            AudioFormat audioFormat = audioInputStream.getFormat();
-
-            if (audioFormat.getSampleRate() == 16000 && audioFormat.getChannels() == 1 && audioFormat.getEncoding() == AudioFormat.Encoding.PCM_SIGNED) {
-                IS_WAV_FORMAT = true;
-            }
-
-        } catch (UnsupportedAudioFileException e) {
-            IS_WAV_FORMAT = false;
-        }
-    }
-
-    private static boolean isAudioFormat(File file) {
-
-        String fileName = file.getName().toLowerCase();
-
-        return fileName.endsWith(".wav") ||
-                fileName.endsWith(".mp3") ||
-                fileName.endsWith(".ogg");
     }
 }
