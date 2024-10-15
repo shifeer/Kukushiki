@@ -18,6 +18,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.text.MessageFormat;
 import java.util.Base64;
 
@@ -41,45 +42,33 @@ public class RabbitFileReceiver {
 
     @RabbitListener(queues = {"${rabbit.queue.nameForTranscribe}"})
     public void receive(FileMessageDto fileMessageDto) {
-        log.info("Received file: {}", fileMessageDto.getFileName());
+
+        log.info("Received file : {0} and task ID{1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId());
 
         String taskId = fileMessageDto.getTaskId();
-        File file = decodeFile(taskId, fileMessageDto.getFileName(), fileMessageDto.getFileContent());
-        File fileOptional;
         try {
-            fileOptional = ConvertAudioToWavService.convertAudioToWav(file);
-            if (fileOptional == null) {
-                redisService.setStatusError(taskId, Status.ERROR);
-                return;
-            }
-        } catch (InterruptedException | IOException e) {
-            log.error("Error while converting audio to wav file", e);
+            File file = decodeFile(taskId, fileMessageDto.getFileName(), fileMessageDto.getFileContent());
+            File fileConverted = ConvertAudioToWavService.convertAudioToWav(file);
+            String resultTranscribe = transcriptionService.rec(fileConverted);
+
+            redisService.setResult(taskId, resultTranscribe);
+        } catch (DecodingException e) {
+            log.error(e.getMessage());
             redisService.setStatusError(taskId, Status.ERROR);
-            return;
+        } catch (UnsupportedEncodingException e) {
+            log.error("Service not supported audio format this audioFile: {}", fileMessageDto.getFileName());
+            redisService.setStatusError(taskId, Status.ERROR);
+        } catch (IOException | InterruptedException e) {
+            log.error("Error while working with file or stream");
+            redisService.setStatusError(taskId, Status.ERROR);
         } catch (UnsupportedAudioFileException e) {
-            log.error("Unsupported audio file", e);
+            log.error("Audio file not supported");
             redisService.setStatusError(taskId, Status.ERROR_FORMAT);
-            return;
         }
 
-        String s = null;
-
-        try {
-            s = transcriptionService.rec(fileOptional);
-        } catch (IOException e) {
-            log.error("Error while transcribing file", e);
-            redisService.setStatusError(taskId, Status.ERROR);
-            return;
-        } catch (UnsupportedAudioFileException e) {
-            log.error("Unsupported audio file", e);
-            redisService.setStatusError(taskId, Status.ERROR_FORMAT);
-            return;
-        }
-
-        redisService.setResult(taskId, s);
     }
 
-    private File decodeFile(String taskId, String fileName, String fileContent) {
+    private File decodeFile(String taskId, String fileName, String fileContent) throws DecodingException {
         byte[] byteFileContent = Base64.getDecoder().decode(fileContent);
         File file = new File(MessageFormat.format("{0}/+{1}+{2}", filePath, taskId, fileName));
         try (FileOutputStream fos = new FileOutputStream(file)) {
@@ -87,6 +76,10 @@ public class RabbitFileReceiver {
         } catch (IOException e) {
             log.error("Error decoding file", e);
             redisService.setStatusError(taskId, Status.ERROR);
+            if (file.exists() && file.delete()) {
+                log.info("Deleted file : {0}", file.getAbsolutePath());
+            }
+            throw new DecodingException("Error decoding file");
         }
         return file;
     }
