@@ -43,7 +43,7 @@ public class RabbitFileReceiver {
     @RabbitListener(queues = {"${rabbit.queue.nameForTranscribe}"})
     public void receive(FileMessageDto fileMessageDto) {
 
-        log.info("Received file : {0} and task ID{1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId());
+        log.info("Received file : {0} and task ID {1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId());
 
         String taskId = fileMessageDto.getTaskId();
         try {

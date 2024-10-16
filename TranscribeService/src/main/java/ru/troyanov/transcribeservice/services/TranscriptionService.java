@@ -31,19 +31,16 @@ public class TranscriptionService {
              Recognizer recognizer = new Recognizer(model, 16000)) {
 
             StringBuilder sb = new StringBuilder();
-            JSONObject json;
             int nbytes;
             byte[] b = new byte[4096];
 
             while ((nbytes = ais.read(b)) > 0) {
                 if (recognizer.acceptWaveForm(b, nbytes)) {
-                    json = new JSONObject(recognizer.getResult());
-                    sb.append(json.getString("text")).append(" ");
+                    sb.append(extractTextFromJson(recognizer.getResult())).append(" ");
                 }
             }
 
-            json = new JSONObject(recognizer.getFinalResult());
-            sb.append(json.getString("text"));
+            sb.append(extractTextFromJson(recognizer.getFinalResult()));
 
             log.info("{} is transcribed", file.getAbsolutePath());
 
@@ -53,5 +50,10 @@ public class TranscriptionService {
                 log.info("{} is deleted", file.getAbsolutePath());
             }
         }
+    }
+
+    private String extractTextFromJson(String jsonString) {
+        JSONObject jsonObject = new JSONObject(jsonString);
+        return jsonObject.optString("text");
     }
 }
