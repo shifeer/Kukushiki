@@ -22,12 +22,12 @@ public class ConvertAudioToWavService {
 
         if (!isAudioFormat(audioFile)) {
             if (audioFile.exists() && audioFile.delete()) {
-                log.info("Audio file deleted");
+                log.info("File deleted");
             } else {
-                log.info("Audio file not deleted");
+                log.info("File not deleted");
             }
 
-            throw new UnsupportedAudioFileException("Unsupported audio file format");
+            throw new UnsupportedAudioFileException("Unsupported file format");
         }
 
         isWav16kHzMono(audioFile);

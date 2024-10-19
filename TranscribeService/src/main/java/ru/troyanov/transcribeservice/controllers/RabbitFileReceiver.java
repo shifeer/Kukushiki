@@ -64,7 +64,7 @@ public class RabbitFileReceiver {
             log.error("Error while working with file or stream");
             redisService.setStatusError(taskId, Status.ERROR);
         } catch (UnsupportedAudioFileException e) {
-            log.warn("Audio file not supported");
+            log.warn("File not supported");
             redisService.setStatusError(taskId, Status.ERROR_FORMAT);
         }
 
