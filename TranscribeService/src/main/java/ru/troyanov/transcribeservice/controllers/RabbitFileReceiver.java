@@ -6,19 +6,18 @@ import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.troyanov.FileMessageDto;
 import ru.troyanov.Redis.Status;
 import ru.troyanov.transcribeservice.exceptions.DecodingException;
 import ru.troyanov.transcribeservice.services.ConvertAudioToWavService;
 import ru.troyanov.transcribeservice.services.CorrectTextService;
 import ru.troyanov.transcribeservice.services.RedisService;
 import ru.troyanov.transcribeservice.services.TranscriptionService;
-import ru.troyanov.FileMessageDto;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.text.MessageFormat;
 import java.util.Base64;
 
@@ -43,7 +42,7 @@ public class RabbitFileReceiver {
     @RabbitListener(queues = {"${rabbit.queue.nameForTranscribe}"})
     public void receive(FileMessageDto fileMessageDto) {
 
-        log.info("Received file : {0} and task ID {1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId());
+        log.info(MessageFormat.format("Received file : {0} and task ID {1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId()));
 
         String taskId = fileMessageDto.getTaskId();
         try {
@@ -54,9 +53,6 @@ public class RabbitFileReceiver {
             redisService.setResult(taskId, resultTranscribe);
         } catch (DecodingException e) {
             log.error(e.getMessage());
-            redisService.setStatusError(taskId, Status.ERROR);
-        } catch (UnsupportedEncodingException e) {
-            log.error("Service not supported audio format this audioFile: {}", fileMessageDto.getFileName());
             redisService.setStatusError(taskId, Status.ERROR);
         } catch (IOException | InterruptedException e) {
             log.error("Error while working with file or stream");
@@ -77,7 +73,7 @@ public class RabbitFileReceiver {
             log.error("Error decoding file", e);
             redisService.setStatusError(taskId, Status.ERROR);
             if (file.exists() && file.delete()) {
-                log.info("Deleted file : {0}", file.getAbsolutePath());
+                log.info("Deleted file : {}", file.getAbsolutePath());
             }
             throw new DecodingException("Error decoding file");
         }

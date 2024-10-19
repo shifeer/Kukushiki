@@ -19,6 +19,6 @@ public class RedisService {
     }
 
     public void setStatusError(String taskId, Status status) {
-        redisTemplate.opsForHash().put(taskId, "status", status);
+        redisTemplate.opsForHash().put(taskId, "status", status.toString());
     }
 }
