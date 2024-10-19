@@ -48,6 +48,12 @@ public class RabbitFileReceiver {
         try {
             File file = decodeFile(taskId, fileMessageDto.getFileName(), fileMessageDto.getFileContent());
             File fileConverted = ConvertAudioToWavService.convertAudioToWav(file);
+
+            if (fileConverted == null) {
+                redisService.setStatusError(taskId, Status.ERROR);
+                return;
+            }
+
             String resultTranscribe = transcriptionService.rec(fileConverted);
 
             redisService.setResult(taskId, resultTranscribe);

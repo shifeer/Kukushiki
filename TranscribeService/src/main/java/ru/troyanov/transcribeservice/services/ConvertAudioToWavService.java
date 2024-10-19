@@ -92,6 +92,7 @@ public class ConvertAudioToWavService {
             } else {
                 log.warn("Could not delete file {}", audioFile.getAbsolutePath());
             }
+
             return null;
         }
     }

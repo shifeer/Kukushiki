@@ -39,9 +39,9 @@ public class RestTranscriptionController {
 
         log.info("File is received {}", multipartFile.getOriginalFilename());
 
-        sendFile(multipartFile);
+        String taskId = sendFile(multipartFile);
 
-        return new ResponseEntity<>(HttpStatus.CREATED);
+        return new ResponseEntity<>(taskId, HttpStatus.CREATED);
     }
 
     @GetMapping("/getText{taskId}")
@@ -53,11 +53,15 @@ public class RestTranscriptionController {
 
         Status redisTaskStatus = Status.fromString(redisService.getTaskStatus(taskId));
 
+        if (redisTaskStatus == null) {
+            return new ResponseEntity<>("Not task id", HttpStatus.BAD_REQUEST);
+        }
+
         log.info("Task id is {}", taskId);
 
         switch (redisTaskStatus) {
             case PROCESSING:
-                return new ResponseEntity<>("Task is processing", HttpStatus.NO_CONTENT);
+                return new ResponseEntity<>("Task is processing", HttpStatus.OK);
             case ERROR:
                 return new ResponseEntity<>("Error service", HttpStatus.INTERNAL_SERVER_ERROR);
             case ERROR_FORMAT:
@@ -70,7 +74,7 @@ public class RestTranscriptionController {
         }
     }
 
-    private void sendFile(MultipartFile multipartFile) throws IOException {
+    private String sendFile(MultipartFile multipartFile) throws IOException {
         String taskId = UUID.randomUUID().toString();
         String fileName = multipartFile.getOriginalFilename();
         byte[] audioBytes = multipartFile.getBytes();
@@ -81,5 +85,6 @@ public class RestTranscriptionController {
         redisService.createNewTask(taskId);
 
         log.info("File is sent with task id {}", taskId);
+        return taskId;
     }
 }
