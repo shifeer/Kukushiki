@@ -48,6 +48,8 @@ public class TranscriptionService {
         } finally {
             if (file.exists() && file.delete()) {
                 log.info("{} is deleted", file.getAbsolutePath());
+            } else {
+                log.warn("Not deleted is {}", file.getAbsolutePath());
             }
         }
     }

@@ -20,7 +20,13 @@ public class ConvertAudioToWavService {
 
     public static File convertAudioToWav(File audioFile) throws IOException, UnsupportedAudioFileException, InterruptedException {
 
-        if (!isAudioFormat(audioFile) && audioFile.exists() && audioFile.delete()) {
+        if (!isAudioFormat(audioFile)) {
+            if (audioFile.exists() && audioFile.delete()) {
+                log.info("Audio file deleted");
+            } else {
+                log.info("Audio file not deleted");
+            }
+
             throw new UnsupportedAudioFileException("Unsupported audio file format");
         }
 
@@ -54,7 +60,8 @@ public class ConvertAudioToWavService {
 
         return fileName.endsWith(".wav") ||
                 fileName.endsWith(".mp3") ||
-                fileName.endsWith(".ogg");
+                fileName.endsWith(".ogg") ||
+                fileName.endsWith(".wave");
     }
 
     private static File convert(File audioFile) throws IOException, InterruptedException {
@@ -82,6 +89,8 @@ public class ConvertAudioToWavService {
             log.error("{} convert failed", audioFile.getAbsolutePath());
             if (audioFile.exists() && audioFile.delete()) {
                 log.info("{} deleted successfully", audioFile.getAbsolutePath());
+            } else {
+                log.warn("Could not delete file {}", audioFile.getAbsolutePath());
             }
             return null;
         }

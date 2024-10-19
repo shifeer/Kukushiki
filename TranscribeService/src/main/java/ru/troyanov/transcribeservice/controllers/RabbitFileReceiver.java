@@ -58,7 +58,7 @@ public class RabbitFileReceiver {
             log.error("Error while working with file or stream");
             redisService.setStatusError(taskId, Status.ERROR);
         } catch (UnsupportedAudioFileException e) {
-            log.error("Audio file not supported");
+            log.warn("Audio file not supported");
             redisService.setStatusError(taskId, Status.ERROR_FORMAT);
         }
 
@@ -74,6 +74,8 @@ public class RabbitFileReceiver {
             redisService.setStatusError(taskId, Status.ERROR);
             if (file.exists() && file.delete()) {
                 log.info("Deleted file : {}", file.getAbsolutePath());
+            } else {
+                log.warn("Could not delete file: {}", file.getAbsolutePath());
             }
             throw new DecodingException("Error decoding file");
         }
