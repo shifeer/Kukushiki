@@ -13,6 +13,8 @@ import ru.troyanov.opdkukushiki.services.RedisService;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController()
@@ -29,7 +31,7 @@ public class RestTranscriptionController {
     }
 
     @PostMapping("/new")
-    public ResponseEntity<String> index(@RequestParam("file")MultipartFile multipartFile) throws IOException {
+    public ResponseEntity<Map<String, String>> index(@RequestParam("file")MultipartFile multipartFile) throws IOException {
 
         if (multipartFile.isEmpty()) {
             log.warn("File is empty");
@@ -41,34 +43,45 @@ public class RestTranscriptionController {
 
         String taskId = sendFile(multipartFile);
 
-        return new ResponseEntity<>(taskId, HttpStatus.CREATED);
+        Map<String, String> result = new HashMap<>();
+        result.put("taskId", taskId);
+
+        return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
 
     @GetMapping("/getText{taskId}")
-    public ResponseEntity<String> getText(@PathVariable("taskId") String taskId) {
-        if (taskId == null || taskId.isEmpty()) {
+    public ResponseEntity<Map<String, String>> getText(@PathVariable("taskId") String taskId) {
+        if (taskId == null) {
             log.warn("Task id is empty");
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
+        Map<String, String> resultResponse = new HashMap<>();
+
         Status redisTaskStatus = Status.fromString(redisService.getTaskStatus(taskId));
 
         if (redisTaskStatus == null) {
-            return new ResponseEntity<>("Not task id", HttpStatus.BAD_REQUEST);
+            resultResponse.put("description", "Not task id");
+            return new ResponseEntity<>(resultResponse, HttpStatus.BAD_REQUEST);
         }
 
         log.info("Task id is {}", taskId);
 
         switch (redisTaskStatus) {
             case PROCESSING:
-                return new ResponseEntity<>("Task is processing", HttpStatus.OK);
+                resultResponse.put("description", "Task is processing");
+                return new ResponseEntity<>(resultResponse, HttpStatus.OK);
             case ERROR:
-                return new ResponseEntity<>("Error service", HttpStatus.INTERNAL_SERVER_ERROR);
+                resultResponse.put("description", "Server is error");
+                return new ResponseEntity<>(resultResponse, HttpStatus.INTERNAL_SERVER_ERROR);
             case ERROR_FORMAT:
-                return new ResponseEntity<>("Error formatting", HttpStatus.BAD_REQUEST);
+                resultResponse.put("description", "Task is error format file");
+                return new ResponseEntity<>(resultResponse, HttpStatus.BAD_REQUEST);
             case DONE:
                 String result = redisService.getTaskResult(taskId);
-                return new ResponseEntity<>(result, HttpStatus.OK);
+                resultResponse.put("description", "Task is done");
+                resultResponse.put("taskIdResult", result);
+                return new ResponseEntity<>(resultResponse, HttpStatus.OK);
             default:
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }

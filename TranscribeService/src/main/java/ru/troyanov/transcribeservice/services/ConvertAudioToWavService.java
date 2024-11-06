@@ -18,7 +18,7 @@ public class ConvertAudioToWavService {
 
     private static boolean IS_WAV_FORMAT;
 
-    public static File convertAudioToWav(File audioFile) throws IOException, UnsupportedAudioFileException, InterruptedException {
+    public File convertAudioToWav(File audioFile) throws IOException, UnsupportedAudioFileException, InterruptedException {
 
         if (!isAudioFormat(audioFile)) {
             if (audioFile.exists() && audioFile.delete()) {
@@ -39,7 +39,7 @@ public class ConvertAudioToWavService {
         }
     }
 
-    private static void isWav16kHzMono(File audioFile) throws IOException {
+    private void isWav16kHzMono(File audioFile) throws IOException {
 
         try {
             AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
@@ -54,7 +54,7 @@ public class ConvertAudioToWavService {
         }
     }
 
-    private static boolean isAudioFormat(File file) {
+    private boolean isAudioFormat(File file) {
 
         String fileName = file.getName().toLowerCase();
 

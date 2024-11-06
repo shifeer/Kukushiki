@@ -1,6 +1,7 @@
 package ru.troyanov.transcribeservice.controllers;
 
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -10,7 +11,6 @@ import ru.troyanov.FileMessageDto;
 import ru.troyanov.Redis.Status;
 import ru.troyanov.transcribeservice.exceptions.DecodingException;
 import ru.troyanov.transcribeservice.services.ConvertAudioToWavService;
-import ru.troyanov.transcribeservice.services.CorrectTextService;
 import ru.troyanov.transcribeservice.services.RedisService;
 import ru.troyanov.transcribeservice.services.TranscriptionService;
 
@@ -31,15 +31,16 @@ public class RabbitFileReceiver {
     private String filePath;
     private final TranscriptionService transcriptionService;
     private final RedisService redisService;
-    private final CorrectTextService correctTextService;
+    private final ConvertAudioToWavService convertAudioToWavService;
 
-    public RabbitFileReceiver(TranscriptionService transcriptionService, RedisService redisService, CorrectTextService correctTextService) {
+    public RabbitFileReceiver(TranscriptionService transcriptionService, RedisService redisService, ConvertAudioToWavService convertAudioToWavService) {
         this.transcriptionService = transcriptionService;
         this.redisService = redisService;
-        this.correctTextService = correctTextService;
+        this.convertAudioToWavService = convertAudioToWavService;
     }
 
     @RabbitListener(queues = {"${rabbit.queue.nameForTranscribe}"})
+    @SneakyThrows({IOException.class, InterruptedException.class})
     public void receive(FileMessageDto fileMessageDto) {
 
         log.info(MessageFormat.format("Received file : {0} and task ID {1}", fileMessageDto.getFileName(), fileMessageDto.getTaskId()));
@@ -47,7 +48,7 @@ public class RabbitFileReceiver {
         String taskId = fileMessageDto.getTaskId();
         try {
             File file = decodeFile(taskId, fileMessageDto.getFileName(), fileMessageDto.getFileContent());
-            File fileConverted = ConvertAudioToWavService.convertAudioToWav(file);
+            File fileConverted = convertAudioToWavService.convertAudioToWav(file);
 
             if (fileConverted == null) {
                 redisService.setStatusError(taskId, Status.ERROR);
@@ -59,9 +60,6 @@ public class RabbitFileReceiver {
             redisService.setResult(taskId, resultTranscribe);
         } catch (DecodingException e) {
             log.error(e.getMessage());
-            redisService.setStatusError(taskId, Status.ERROR);
-        } catch (IOException | InterruptedException e) {
-            log.error("Error while working with file or stream");
             redisService.setStatusError(taskId, Status.ERROR);
         } catch (UnsupportedAudioFileException e) {
             log.warn("File not supported");
